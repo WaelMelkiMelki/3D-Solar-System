@@ -75,13 +75,7 @@ The project includes several configurable aspects:
 - **Dynamic Lighting**: Realistic sun-based lighting system
 - **Moon Systems**: Accurate orbital patterns for planetary moons
 -
-## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📝 License
-
-This project is open source and available under the MIT License.
 
 ## � Resources
 
@@ -111,3 +105,4 @@ This project is open source and available under the MIT License.
 **ExtendedReality25I26**
 
 - GitHub: [@ExtendedReality25I26](https://github.com/ExtendedReality25I26)
+
