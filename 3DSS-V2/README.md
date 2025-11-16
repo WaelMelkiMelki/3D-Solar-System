@@ -1,4 +1,3 @@
-# 3DSS-V2 — Modular 3D Solar System Simulation 🌌
 
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![NPM Version](https://img.shields.io/npm/v/three)
