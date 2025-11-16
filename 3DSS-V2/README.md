@@ -23,24 +23,49 @@ The goal of this version is to improve scalability, maintainability, and perform
 
 ## 🛠️ Project Structure
 ```
-3DSS-V2/ 
-├── images/ # Visual assets 
-├── public/ # Static files served directly 
-│ └── asteroids/ 
-│ └── images/ # Asteroid-related images 
-├── src/ # Source code (modular components) 
-│ ├── planets/ # Planet rendering and orbital logic 
-│ ├── moons/ # Moon rendering and orbital logic 
-│ ├── asteroids/ # Asteroid belt and objects 
-│ ├── interaction/ # User interaction and controls 
-│ ├── materials/ # Shaders and materials 
-│ ├── textures/ # Texture maps 
-│ └── main.js # Entry point 
-├── index.html # Main HTML file 
-├── style.css # Global styles 
-├── package.json # Project metadata and dependencies 
-├── package-lock.json # Dependency lock file 
-├── README.md # Project documentation
+3DSS-V2/
+├── images/                                
+│
+├── public/                                 # Static assets accessible by the browser
+│   ├── asteroids/                          # Asteroid field sprites, rock textures
+│   └── images/                             # Global textures: planets, moons, sun, maps, normals, speculars
+│                                           # ✔ Earth maps, gas giant textures, rocky planet textures, etc.
+│                                           # Used by planets.js via TextureLoader
+│
+├── src/                                    # Main source code (modular ES modules)
+│   ├── setup.js                            # Scene, camera, renderer, lights, controls, bloom, passes
+│                                           # Initializes the 3D environment and exports core objects
+│
+│   ├── planets.js                          # Planet creation + materials + edgy 3D visuals
+│                                           # Handles:
+│                                           #   ✔ Loading textures from /images/
+│                                           #   ✔ Planet meshes + atmospheres + fresnel glow
+│                                           #   ✔ Orbital animation logic
+│                                           #   ✔ Sun emissive material and glare
+│
+│   ├── interactions.js                     # Mouse interaction + raycasting + planet selection
+│                                           # Handles:
+│                                           #   ✔ Hover outline
+│                                           #   ✔ Click to focus planet
+│                                           #   ✔ Smooth camera transitions
+│                                           #   ✔ Info panel events
+│
+│   ├── test-errors/                        # Error logs, debugging utilities, experimental tests
+│
+│   └── main.js                             # Application entry point
+│                                           #   ✔ Imports setup, planets, interactions
+│                                           #   ✔ Animation loop (requestAnimationFrame)
+│                                           #   ✔ Updates orbits, rotations, and postprocessing
+│
+├── index.html                              # HTML container that loads main.js (type="module")
+│
+├── style.css                               # Global UI styles, typography, layout controls
+│
+├── package.json                            # Project metadata + dependencies (three.js, server, tooling)
+├── package-lock.json                       # Locked dependency versions
+│
+└── README.md                                # Documentation, usage instructions, development notes
+
 ```
 ---
 
