@@ -106,9 +106,9 @@ import { initInteractions } from './interactions.js';
       if (p.mercury.planet3d) p.mercury.planet3d.rotateY(0.004 * settings.accelerationOrbit);
     }
     if (p.venus) {
-      p.venus.planet.rotateY(0.0005 * settings.acceleration);
-      if (p.venus.Atmosphere) p.venus.Atmosphere.rotateY(0.0005 * settings.acceleration);
-      if (p.venus.planet3d) p.venus.planet3d.rotateY(0.0006 * settings.accelerationOrbit);
+      p.venus.planet.rotateY(0.001639 * settings.acceleration);
+      if (p.venus.Atmosphere) p.venus.Atmosphere.rotateY(0.001639 * settings.acceleration);
+      if (p.venus.planet3d) p.venus.planet3d.rotateY(0.001639 * settings.accelerationOrbit);
     }
     if (p.earth) {
       p.earth.planet.rotateY(0.005 * settings.acceleration);
@@ -117,27 +117,27 @@ import { initInteractions } from './interactions.js';
     }
     if (p.mars) {
       p.mars.planet.rotateY(0.01 * settings.acceleration);
-      if (p.mars.planet3d) p.mars.planet3d.rotateY(0.0007 * settings.accelerationOrbit);
+      if (p.mars.planet3d) p.mars.planet3d.rotateY(0.00053 * settings.accelerationOrbit);
     }
     if (p.jupiter) {
       p.jupiter.planet.rotateY(0.005 * settings.acceleration);
-      if (p.jupiter.planet3d) p.jupiter.planet3d.rotateY(0.0003 * settings.accelerationOrbit);
+      if (p.jupiter.planet3d) p.jupiter.planet3d.rotateY(0.000084 * settings.accelerationOrbit);
     }
     if (p.saturn) {
       p.saturn.planet.rotateY(0.01 * settings.acceleration);
-      if (p.saturn.planet3d) p.saturn.planet3d.rotateY(0.0002 * settings.accelerationOrbit);
+      if (p.saturn.planet3d) p.saturn.planet3d.rotateY(0.000034 * settings.accelerationOrbit);
     }
     if (p.uranus) {
       p.uranus.planet.rotateY(0.005 * settings.acceleration);
-      if (p.uranus.planet3d) p.uranus.planet3d.rotateY(0.0001 * settings.accelerationOrbit);
+      if (p.uranus.planet3d) p.uranus.planet3d.rotateY(0.0000119 * settings.accelerationOrbit);
     }
     if (p.neptune) {
       p.neptune.planet.rotateY(0.005 * settings.acceleration);
-      if (p.neptune.planet3d) p.neptune.planet3d.rotateY(0.00008 * settings.accelerationOrbit);
+      if (p.neptune.planet3d) p.neptune.planet3d.rotateY(0.00000606 * settings.accelerationOrbit);
     }
     if (p.pluto) {
       p.pluto.planet.rotateY(0.001 * settings.acceleration);
-      if (p.pluto.planet3d) p.pluto.planet3d.rotateY(0.00006 * settings.accelerationOrbit);
+      if (p.pluto.planet3d) p.pluto.planet3d.rotateY(0.00000403 * settings.accelerationOrbit);
     }
 
     // Animate Earth's moon(s)
