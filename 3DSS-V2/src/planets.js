@@ -1,17 +1,19 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { planetsConfig } from './data/planetsConfig.js';
+import { planetsConfig, AU_SCALE } from './data/planetsConfig.js';
 
 export function createPlanets(scene, loadTexture, settings, gui) {
   
+  // Helper: Conversion Degrés -> Radians
+  const toRad = (deg) => deg * (Math.PI / 180);
+
   // Helper: Création d'une planète
   function createPlanet(name, config) {
-    const { physical, assets, moons: moonConfigs } = config;
+    const { physical, assets, kepler, moons: moonConfigs } = config;
     let material;
 
     // --- 1. Gestion des Matériaux ---
     if (name === 'Earth' && assets.customShader) {
-      // Shader Terre (Jour/Nuit)
       material = new THREE.ShaderMaterial({
         uniforms: {
           dayTexture: { value: loadTexture.load(assets.map) },
@@ -46,21 +48,18 @@ export function createPlanets(scene, loadTexture, settings, gui) {
         `
       });
     } else if (name === 'Sun' && assets.emissive) {
-      // Soleil
       material = new THREE.MeshStandardMaterial({
         emissive: assets.emissiveColor,
         emissiveMap: loadTexture.load(assets.map),
         emissiveIntensity: assets.emissiveIntensity
       });
     } else if (assets.bump) {
-      // Avec Bump Map
       material = new THREE.MeshPhongMaterial({
         map: loadTexture.load(assets.map),
         bumpMap: loadTexture.load(assets.bump),
         bumpScale: 0.7
       });
     } else {
-      // Standard
       material = new THREE.MeshPhongMaterial({
         map: loadTexture.load(assets.map)
       });
@@ -69,59 +68,89 @@ export function createPlanets(scene, loadTexture, settings, gui) {
     // --- 2. Géométrie et Mesh ---
     const geometry = new THREE.SphereGeometry(physical.radius, 32, 20);
     const planet = new THREE.Mesh(geometry, material);
-    const planet3d = new THREE.Object3D(); // Conteneur pour position orbitale
-    const planetSystem = new THREE.Group(); // Conteneur pour inclinaison et lunes
+    
+    // Conteneur 3D qui sera positionné sur l'orbite
+    const planet3d = new THREE.Object3D(); 
+    
+    // Conteneur interne pour l'inclinaison axiale (tilt) et les lunes
+    const planetSystem = new THREE.Group(); 
 
-    // --- 3. Calculs de Kepler (Orbites Elliptiques) ---
-    let ellipticalData = {};
-    if (name !== 'Sun') {
-      const a = physical.distance; // Demi-grand axe
-      const e = physical.eccentricity || 0; // Excentricité
-      const b = a * Math.sqrt(1 - e * e); // Demi-petit axe
-      const c = a * e; // Distance focale
-      
-      ellipticalData = { a, b, c, eccentricity: e };
-      
-      // Position initiale (sera mise à jour par main.js)
-      planet.position.set(0, 0, 0);
-      
-      // Inclinaison de la planète (Axial Tilt)
-      planet.rotation.z = (physical.tilt || 0) * Math.PI / 180;
+    // --- 3. Calculs de l'Orbite Képlérienne (PDF Page 4-5) ---
+    let orbitLine = null;
 
-      // --- 4. Dessin de l'orbite (Visuel) ---
-      const ellipsePoints = [];
-      const segments = 128;
+    if (kepler) {
+      // Paramètres orbitaux
+      const a = kepler.a * AU_SCALE; // Demi-grand axe mis à l'échelle
+      const e = kepler.e;            // Excentricité
+      const I = toRad(kepler.I);     // Inclinaison
+      const Omega = toRad(kepler.Omega); // Longitude du nœud ascendant
+      // Argument du périhélie (omega = w_bar - Omega)
+      const w = toRad(kepler.w_bar - kepler.Omega); 
+
+      // Calcul du demi-petit axe b
+      const b = a * Math.sqrt(1 - e * e);
+
+      // Génération des points de l'orbite
+      const points = [];
+      const segments = 256; // Plus de segments pour une courbe lisse
+
       for (let i = 0; i <= segments; i++) {
-        const theta = (i / segments) * Math.PI * 2;
-        const x = a * Math.cos(theta) - c;
-        const z = b * Math.sin(theta);
-        ellipsePoints.push(new THREE.Vector3(x, 0, z));
+        // Anomalie excentrique E de 0 à 2PI
+        const E = (i / segments) * 2 * Math.PI;
+
+        // 1. Coordonnées dans le plan orbital (2D)
+        // x = a(cos E - e), y = b sin E
+        // Note: Dans Three.js, le plan "plat" est XZ. On utilise Z pour le "y" du PDF.
+        const x_orb = a * (Math.cos(E) - e);
+        const z_orb = b * Math.sin(E);
+        
+        const vec = new THREE.Vector3(x_orb, 0, z_orb);
+
+        // 2. Application des Rotations (Matrices R1, R2, R3 du PDF)
+        // Ordre inverse des opérations mathématiques pour les vecteurs :
+        
+        // A. Rotation de l'argument du périhélie (w) autour de Y (axe vertical)
+        vec.applyAxisAngle(new THREE.Vector3(0, 1, 0), w);
+
+        // B. Rotation de l'inclinaison (I) autour de X
+        vec.applyAxisAngle(new THREE.Vector3(1, 0, 0), I);
+
+        // C. Rotation de la longitude du nœud (Omega) autour de Y
+        vec.applyAxisAngle(new THREE.Vector3(0, 1, 0), Omega);
+
+        points.push(vec);
       }
-      
-      const orbitGeometry = new THREE.BufferGeometry().setFromPoints(ellipsePoints);
+
+      const orbitGeometry = new THREE.BufferGeometry().setFromPoints(points);
       const orbitMaterial = new THREE.LineBasicMaterial({ 
         color: 0xFFFFFF, 
         transparent: true, 
-        opacity: 0.15 
+        opacity: 0.2 
       });
-      const orbit = new THREE.LineLoop(orbitGeometry, orbitMaterial);
-      // orbit.rotation.x = Math.PI / 2; // SUPPRIMER CETTE LIGNE
-      orbit.rotation.x = Math.PI / 2; // Garde-la uniquement si tu veux que l'orbite soit verticale, mais ici on veut du plat :
-      orbit.rotation.x = 0; // OU mets simplement 0
-      scene.add(orbit);
-    } else {
-      planet.position.set(0, 0, 0);
+      orbitLine = new THREE.LineLoop(orbitGeometry, orbitMaterial);
+      scene.add(orbitLine);
+
+      // Stockage des données pour l'animation dans main.js
+      planet.keplerData = {
+        a: a,
+        e: e,
+        I: I,
+        Omega: Omega,
+        w: w,
+        L: kepler.L, // Longitude moyenne à J2000
+        dL: kepler.dL // Vitesse moyenne
+      };
     }
 
-    // Stockage des données pour l'animation
-    planet.animationData = {
-      angle: Math.random() * Math.PI * 2, // Angle de départ aléatoire
-      ...ellipticalData
-    };
+    // Position initiale (sera écrasée par main.js dès la première frame)
+    planet.position.set(0, 0, 0);
+    
+    // Inclinaison de la planète sur elle-même (Axial Tilt)
+    planetSystem.rotation.z = toRad(physical.tilt || 0);
 
     planetSystem.add(planet);
 
-    // --- 5. Anneaux ---
+    // --- 4. Anneaux ---
     let Ring;
     if (assets.hasRings) {
       const ringData = assets.rings;
@@ -132,12 +161,12 @@ export function createPlanets(scene, loadTexture, settings, gui) {
         transparent: true
       });
       Ring = new THREE.Mesh(RingGeo, RingMat);
-      Ring.rotation.x = -0.5 * Math.PI;
-      Ring.rotation.y = -(physical.tilt || 0) * Math.PI / 180;
+      Ring.rotation.x = -0.5 * Math.PI; // À plat
+      // L'anneau suit le tilt de la planète (déjà dans planetSystem)
       planetSystem.add(Ring);
     }
 
-    // --- 6. Atmosphère ---
+    // --- 5. Atmosphère ---
     let Atmosphere;
     if (assets.atmosphere) {
       const atmosphereGeom = new THREE.SphereGeometry(physical.radius + 0.15, 32, 20);
@@ -149,15 +178,14 @@ export function createPlanets(scene, loadTexture, settings, gui) {
         blending: THREE.AdditiveBlending
       });
       Atmosphere = new THREE.Mesh(atmosphereGeom, atmosphereMaterial);
-      Atmosphere.rotation.z = (physical.tilt || 0) * Math.PI / 180;
-      planet.add(Atmosphere); // Attaché à la planète
+      // L'atmosphère est ajoutée à planetSystem pour suivre le tilt
+      planetSystem.add(Atmosphere); 
     }
 
-    // --- 7. Lunes ---
+    // --- 6. Lunes ---
     let moons = [];
     if (moonConfigs) {
       moons = moonConfigs.map(moonConfig => {
-        // On prépare l'objet lune
         const moonObj = { 
           ...moonConfig, 
           angle: Math.random() * Math.PI * 2,
@@ -165,9 +193,7 @@ export function createPlanets(scene, loadTexture, settings, gui) {
         };
 
         if (moonConfig.modelPath) {
-          // Modèle GLTF (chargement asynchrone géré dans main ou ici via callback)
-          // Pour l'instant on retourne la config, le mesh sera injecté via loadObject plus tard
-          // ou on laisse main.js gérer le chargement GLTF spécifique.
+          // Modèle GLTF chargé plus tard
         } else {
           // Lune Mesh Standard
           const moonMaterial = moonConfig.bump 
@@ -192,7 +218,7 @@ export function createPlanets(scene, loadTexture, settings, gui) {
       });
     }
 
-    // --- 8. Lumière Soleil ---
+    // --- 7. Lumière Soleil ---
     let pointLight = null;
     if (name === 'Sun' && config.light?.enabled) {
       pointLight = new THREE.PointLight(
@@ -216,7 +242,8 @@ export function createPlanets(scene, loadTexture, settings, gui) {
       planetSystem, 
       Ring,
       pointLight,
-      config // IMPORTANT: On passe toute la config pour main.js
+      config,
+      orbitLine // Référence pour le highlighting
     };
   }
 
@@ -231,7 +258,6 @@ export function createPlanets(scene, loadTexture, settings, gui) {
       celestialBodies.sun = body.planet;
       celestialBodies.sunMat = body.planet.material;
       celestialBodies.pointLight = body.pointLight;
-      // Le soleil a aussi besoin de sa config pour la rotation
       celestialBodies.sun.config = config; 
     } else {
       celestialBodies[name.toLowerCase()] = body;
@@ -256,7 +282,6 @@ export function createPlanets(scene, loadTexture, settings, gui) {
       const obj = gltf.scene;
       obj.position.set(positionX, 0, 0);
       obj.scale.set(scale, scale, scale);
-      // On n'ajoute pas à la scène ici si c'est une lune, le callback gérera l'ajout au parent
       if (callback) callback(obj);
       else scene.add(obj);
     }, undefined, function (error) {
@@ -289,7 +314,6 @@ export function createPlanets(scene, loadTexture, settings, gui) {
     }, undefined, console.error);
   }
 
-  // Structure de retour unifiée
   const planets = {
     mercury: celestialBodies.mercury,
     venus: celestialBodies.venus,
@@ -302,7 +326,6 @@ export function createPlanets(scene, loadTexture, settings, gui) {
     pluto: celestialBodies.pluto
   };
 
-  // Extraction des lunes pour accès facile dans main.js
   const jupiterMoons = planets.jupiter?.moons || [];
   const marsMoons = planets.mars?.moons || [];
 
